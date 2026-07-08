@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lost & Fessy-ound</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #ffffff;
+    color: #222;
+}
+
+header {
+    background: #8B1B40;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 22px;
+    color: white;
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+nav button,
+nav a,
+.btn {
+    background: #8B1B40;
+    color: white;
+    border: 2px solid black;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+nav button:hover,
+nav a:hover,
+.btn:hover {
+    background: #751735;
+}
+
+.container {
+    padding: 20px;
+    max-width: 1000px;
+    margin: auto;
+}
+
+.hidden {
+    display: none;
+}
+
+.card {
+    background: #ffffff;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    font-family: Arial, Helvetica, sans-serif;
+    box-sizing: border-box;
+}
+
+button {
+    cursor: pointer;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.small {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.item-img {
+    max-width: 200px;
+    border-radius: 10px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.dark {
+    background: #1e1e1e;
+    color: white;
+}
+
+.dark header h1 {
+    color: black;
+}
+
+.dark .card {
+    background: #2a2a2a;
+}
+
+.dark button,
+.dark .btn,
+.dark nav a {
+    border: 2px solid white;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+    background: black;
+    color: white;
+    border: 2px solid white;
+}
+
+#accountStatus {
+    font-weight: bold;
+}
+
+@media (max-width: 700px) {
+    header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    nav {
+        justify-content: center;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🔍 Lost & Fessy-ound</h1>
+
+<nav>
+<a href="https://app.blackbaud.com/signin/?sessionClear=true&redirectUrl=https:%2F%2Ffessenden.myschoolapp.com%2Fapp%2Fstudent%3Fsvcid%3Dedu%26envid%3Dp-NU2iOghPDEqG03zm6kOeLw%23studentmyday%2Fprogress" target="_blank">myFessy</a>
+<button onclick="registerAccount()">Register Account</button>
+<button onclick="signIn()">Sign In</button>
+<button onclick="signOut()">Sign Out</button>
+<button onclick="show('home')">Home</button>
+<button onclick="show('submit')">Submit</button>
+<button onclick="show('browse')">Browse</button>
+<button onclick="toggleDark()">🌙</button>
+</nav>
+</header>
+
+<div class="container">
+
+<div id="home">
+<h2>Welcome!</h2>
+<p>Browse for your lost items or report ones you found!</p>
+<p id="accountStatus">Status: Not signed in</p>
+
+<input id="search" placeholder="Search by item, type, or hashtag...">
+<button class="btn" onclick="renderItems()">Search</button>
+
+<div id="itemsList"></div>
+</div>
+
+<div id="submit" class="hidden">
+<h2>Submit Item</h2>
+
+<input id="title" placeholder="Item name">
+<textarea id="desc" placeholder="Description"></textarea>
+
+<select id="type">
+<option>Lost</option>
+<option>Found</option>
+</select>
+
+<input
+id="hashtag"
+maxlength="50"
+placeholder="#Electronics  Example: #Water_Bottle"
+>
+
+<input
+type="file"
+id="photo"
+accept="image/*"
+hidden>
+
+<button
+type="button"
+class="btn"
+onclick="document.getElementById('photo').click()">
+Upload Image
+</button>
+
+<span id="fileName">No image selected.</span>
+
+<br><br>
+
+<button class="btn" onclick="addItem()">Submit</button>
+</div>
+
+<div id="browse" class="hidden">
+<h2>All Items</h2>
+<div id="browseList"></div>
+</div>
+
+</div>
+
+<script>
+let items = JSON.parse(localStorage.getItem("items") || "[]");
+let currentUser = localStorage.getItem("currentUser") || null;
+
+const MORSE = {
+    a: ".-",
+    b: "-...",
+    c: "-.-.",
+    d: "-..",
+    e: ".",
+    f: "..-.",
+    g: "--.",
+    h: "....",
+    i: "..",
+    j: ".---",
+    k: "-.-",
+    l: ".-..",
+    m: "--",
+    n: "-.",
+    o: "---",
+    p: ".--.",
+    q: "--.-",
+    r: ".-.",
+    s: "...",
+    t: "-",
+    u: "..-",
+    v: "...-",
+    w: ".--",
+    x: "-..-",
+    y: "-.--",
+    z: "--.."
+};
+
+function save() {
+    localStorage.setItem("items", JSON.stringify(items));
+}
+
+function randomFiveLetters() {
+    const letters = "abcdefghijklmnopqrstuvwxyz";
+    let code = "";
+
+    for (let i = 0; i < 5; i++) {
+        code += letters[Math.floor(Math.random() * letters.length)];
+    }
+
+    return code;
+}
+
+function toMorse(word) {
+    return word.split("").map(letter => MORSE[letter]).join(" ");
+}
+
+function morseToNumber(morse) {
+    return morse
+        .replaceAll(".", "1")
+        .replaceAll("-", "2")
+        .replaceAll(" ", "0");
+}
+
+function registerAccount() {
+    const username = prompt("Choose your requested username:");
+    if (!username) return;
+
+    const gmail = prompt("Enter your Gmail address:");
+    if (!gmail) return;
+
+    const secretLetters = randomFiveLetters();
+    const morseCode = toMorse(secretLetters);
+    const passcode = morseToNumber(morseCode);
+
+    localStorage.setItem("pendingUsername", username);
+    localStorage.setItem("pendingPasscode", passcode);
+
+    const subject = encodeURIComponent("Lost & Fessy-ound Account Request");
+
+    const body = encodeURIComponent(
+`Requested Username: ${username}
+Gmail: ${gmail}
+
+Encrypted Morse Code:
+${morseCode}
+
+Please check if I am trusted and send me the activation passcode.`
+    );
+
+    window.open(
+        `https://mail.google.com/mail/?view=cm&fs=1&to=msun28@fessenden.org&su=${subject}&body=${body}`,
+        "_blank"
+    );
+
+    alert("Gmail opened. Send the email, then wait for your activation passcode.");
+}
+
+function signIn() {
+    const username = prompt("Enter your approved username:");
+    if (!username) return;
+
+    const passcode = prompt("Enter your activation passcode:");
+    if (!passcode) return;
+
+    const savedUsername = localStorage.getItem("pendingUsername");
+    const savedPasscode = localStorage.getItem("pendingPasscode");
+
+    if (username === savedUsername && passcode === savedPasscode) {
+        currentUser = username;
+        localStorage.setItem("currentUser", username);
+        alert("Signed in successfully!");
+        updateAccountStatus();
+        show("home");
+    } else {
+        alert("Incorrect username or activation passcode.");
+    }
+}
+
+function signOut() {
+    currentUser = null;
+    localStorage.removeItem("currentUser");
+    updateAccountStatus();
+    alert("Signed out.");
+    show("home");
+}
+
+function requireSignIn() {
+    if (!currentUser) {
+        alert("Please register and sign in before using this feature.");
+        return false;
+    }
+
+    return true;
+}
+
+function updateAccountStatus() {
+    if (currentUser) {
+        accountStatus.textContent = "Status: Signed in as " + currentUser;
+    } else {
+        accountStatus.textContent = "Status: Not signed in";
+    }
+}
+
+function show(page) {
+    if ((page === "submit" || page === "browse") && !requireSignIn()) {
+        page = "home";
+    }
+
+    document.querySelectorAll(".container > div").forEach(d => d.classList.add("hidden"));
+    document.getElementById(page).classList.remove("hidden");
+    renderItems();
+}
+
+function addItem() {
+    if (!requireSignIn()) return;
+
+    if (!title.value.trim()) {
+        alert("Please enter an item name.");
+        return;
+    }
+
+    if (!desc.value.trim()) {
+        alert("Please enter a description.");
+        return;
+    }
+
+    if (!hashtag.value.trim()) {
+        alert("Please enter a hashtag.");
+        return;
+    }
+
+    if (!confirm("Upload this item?")) return;
+
+    const file = photo.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            createItem(e.target.result);
+        };
+
+        reader.readAsDataURL(file);
+    } else {
+        createItem("");
+    }
+}
+
+function createItem(imageData) {
+    let item = {
+        id: Date.now(),
+        title: title.value,
+        desc: desc.value,
+        type: type.value,
+        hashtag: hashtag.value,
+        photo: imageData,
+        user: currentUser,
+        resolved: false
+    };
+
+    items.push(item);
+    save();
+
+    title.value = "";
+    desc.value = "";
+    hashtag.value = "";
+    photo.value = "";
+    fileName.textContent = "No image selected.";
+
+    alert("Item added!");
+    show("browse");
+}
+
+function renderItems() {
+    let searchVal = search.value?.toLowerCase() || "";
+
+    let filtered = items.filter(i =>
+        i.title.toLowerCase().includes(searchVal) ||
+        i.desc.toLowerCase().includes(searchVal) ||
+        (i.hashtag || "").toLowerCase().includes(searchVal) ||
+        i.type.toLowerCase().includes(searchVal)
+    );
+
+    let html = "";
+
+    if (filtered.length === 0) {
+        html = `<p>No items found.</p>`;
+    }
+
+    filtered.forEach(i => {
+        html += `
+        <div class="card">
+            ${i.photo ? `<img src="${i.photo}" class="item-img">` : ""}
+            <h3>${i.title} (${i.type})</h3>
+            <p>${i.desc}</p>
+            <p class="small">${i.hashtag || "#No_Tag"}</p>
+            <p class="small">Posted by: ${i.user || "Unknown"}</p>
+            <p class="small">Status: ${i.resolved ? "Resolved" : "Active"}</p>
+
+            <button onclick="resolveItem(${i.id})">
+                ${i.resolved ? "Unresolve" : "Resolve"}
+            </button>
+
+            <button onclick="deleteItem(${i.id})">Delete</button>
+        </div>
+        `;
+    });
+
+    itemsList.innerHTML = html;
+    browseList.innerHTML = html;
+}
+
+function resolveItem(id) {
+    if (!requireSignIn()) return;
+    if (!confirm("Change the resolved status?")) return;
+
+    let item = items.find(i => i.id === id);
+    item.resolved = !item.resolved;
+
+    save();
+    renderItems();
+}
+
+function deleteItem(id) {
+    if (!requireSignIn()) return;
+    if (!confirm("Delete this item permanently?")) return;
+
+    items = items.filter(i => i.id !== id);
+
+    save();
+    renderItems();
+}
+
+function toggleDark() {
+    document.body.classList.toggle("dark");
+}
+
+photo.addEventListener("change", () => {
+    if (photo.files.length) {
+        fileName.textContent = photo.files[0].name;
+    } else {
+        fileName.textContent = "No image selected.";
+    }
+});
+
+updateAccountStatus();
+renderItems();
+</script>
+
+</body>
+</html>
